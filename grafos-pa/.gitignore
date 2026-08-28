@@ -20,6 +20,9 @@
 # production
 /build
 
+# dados gerados (data/pairs.json e data/dump/ são versionados)
+/data/cache/
+
 # misc
 .DS_Store
 *.pem
