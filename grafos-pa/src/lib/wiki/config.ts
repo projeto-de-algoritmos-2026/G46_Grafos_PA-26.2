@@ -1,4 +1,9 @@
-/** Configuração do acesso à MediaWiki Action API, ajustável por variável de ambiente. */
+/**
+ * Configuração do acesso aos dados da Wikipédia — a API remota e as duas camadas locais
+ * que ficam na frente dela (dump e cache em disco). Tudo ajustável por variável de ambiente.
+ */
+
+import path from "node:path";
 
 function envNumber(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -30,3 +35,23 @@ export const WIKI_MAX_RETRIES = envNumber("WIKI_MAX_RETRIES", 3);
 
 /** Base do backoff exponencial, em milissegundos. */
 export const WIKI_BACKOFF_MS = envNumber("WIKI_BACKOFF_MS", 500);
+
+/**
+ * Modo offline (`WIKI_OFFLINE=1`): nenhuma expansão vai à rede — o que não estiver no dump
+ * nem no cache lança `WikiOfflineMissError`. É o modo da demonstração e do benchmark, para
+ * que os resultados não dependam de conectividade nem variem com o estado da Wikipédia.
+ */
+export const WIKI_OFFLINE = process.env.WIKI_OFFLINE === "1";
+
+/** Raiz dos dados gerados, relativa ao diretório de execução (a raiz do projeto). */
+const DATA_DIR = process.env.WIKI_DATA_DIR ?? path.resolve(process.cwd(), "data");
+
+/** Cache de expansões, uma entrada por artigo. Não versionado. */
+export const WIKI_CACHE_DIR = process.env.WIKI_CACHE_DIR ?? path.join(DATA_DIR, "cache");
+
+/** Dump consolidado, versionado, que torna a demonstração reprodutível sem rede. */
+export const WIKI_DUMP_PATH =
+  process.env.WIKI_DUMP_PATH ?? path.join(DATA_DIR, "dump", "graph.json.gz");
+
+/** Pares origem/destino fixos usados pelo dump, pelo benchmark e pela demo. */
+export const WIKI_PAIRS_PATH = process.env.WIKI_PAIRS_PATH ?? path.join(DATA_DIR, "pairs.json");

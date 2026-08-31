@@ -1,8 +1,13 @@
 /**
- * Cliente da MediaWiki Action API: dado um artigo, devolve seus links de saída do
- * namespace 0 já com os metadados que a função de custo consome.
+ * Cliente de expansão de artigos: dado um artigo, devolve seus links de saída do namespace 0
+ * já com os metadados que a função de custo consome.
  *
- * Cada expansão combina duas consultas, porque nenhuma delas basta sozinha:
+ * A expansão passa por três camadas, nesta ordem — **dump → cache → rede**. As duas primeiras
+ * são locais e de custo desprezível; só a terceira gasta requisição, e é ela que o modo
+ * offline proíbe. Como toda busca reexpande os mesmos hubs dezenas de vezes, é essa ordem que
+ * torna o benchmark reprodutível e a demonstração independente de conectividade.
+ *
+ * Na camada de rede, cada expansão combina duas consultas, porque nenhuma delas basta sozinha:
  *
  *  1. `prop=revisions` — resolve o redirect da origem e traz o wikitext, de onde sai a
  *     **ordem** dos links (`rank`). Uma requisição.
@@ -14,10 +19,14 @@
  * é coerente com tratá-los como links periféricos.
  */
 
-import type { Neighbor } from "@/lib/graph/types";
+import { readCache, writeCache } from "@/lib/cache/diskCache";
+import { lookupDump } from "@/lib/cache/dump";
+import type { Neighbor, NodeId } from "@/lib/graph/types";
+import { WIKI_OFFLINE } from "./config";
 import { queryApi } from "./ratelimit";
 import { isArticleTitle, isDisambiguationTitle, normalizeTitle } from "./titles";
 import {
+  WikiOfflineMissError,
   WikiPageNotFoundError,
   type ApiPage,
   type PageOutlinks,
@@ -126,8 +135,8 @@ function positionsInBody(
   return positions;
 }
 
-/** Expande um artigo: título canônico e vizinhos ordenados por posição no corpo. */
-export async function fetchPage(title: string): Promise<PageOutlinks> {
+/** Expande um artigo pela rede: título canônico e vizinhos ordenados por posição no corpo. */
+async function fetchPageFromApi(title: string): Promise<PageOutlinks> {
   const source = await fetchSource(title);
   const { pages, redirects } = await fetchLinkedPages(source.title);
 
@@ -154,6 +163,81 @@ export async function fetchPage(title: string): Promise<PageOutlinks> {
   }));
 
   return { source: source.title, neighbors };
+}
+
+/* ── Camadas locais ───────────────────────────────────────────────────────────────── */
+
+/** De onde veio uma expansão. Instrumentação: só `network` gastou requisição. */
+export type ExpansionOrigin = "dump" | "cache" | "network";
+
+const pageKey = (canonical: NodeId) => `page:${canonical}`;
+const aliasKey = (normalized: string) => `alias:${normalized}`;
+
+let stats = { dump: 0, cache: 0, network: 0 };
+
+/** Expansões atendidas por camada desde o último `resetExpansionStats`. */
+export function getExpansionStats(): Readonly<typeof stats> {
+  return { ...stats };
+}
+
+export function resetExpansionStats(): void {
+  stats = { dump: 0, cache: 0, network: 0 };
+}
+
+/**
+ * Cache de duas chaves. O payload fica sob o título **canônico**, mas a consulta chega pelo
+ * título que o usuário escreveu: sem o registro de alias, "EUA" gastaria uma requisição a
+ * cada busca só para redescobrir que é "Estados Unidos".
+ */
+async function readFromCache(normalized: string): Promise<PageOutlinks | undefined> {
+  const direct = await readCache<PageOutlinks>(pageKey(normalized));
+  if (direct) return direct;
+
+  const canonical = await readCache<NodeId>(aliasKey(normalized));
+  if (canonical === undefined) return undefined;
+  return readCache<PageOutlinks>(pageKey(canonical));
+}
+
+async function writeToCache(normalized: string, page: PageOutlinks): Promise<void> {
+  await writeCache(pageKey(page.source), page);
+  if (page.source !== normalized) await writeCache(aliasKey(normalized), page.source);
+}
+
+/**
+ * Expande um artigo consultando dump, cache e rede nessa ordem, e informa qual camada
+ * respondeu. Em modo offline, um miss nas duas camadas locais lança `WikiOfflineMissError`
+ * em vez de ir à rede.
+ */
+export async function fetchPageWithOrigin(
+  title: string,
+): Promise<{ page: PageOutlinks; origin: ExpansionOrigin }> {
+  const normalized = normalizeTitle(title);
+  if (normalized.length === 0) throw new WikiPageNotFoundError(title);
+
+  const fromDump = await lookupDump(normalized);
+  if (fromDump) {
+    stats.dump++;
+    return { page: fromDump, origin: "dump" };
+  }
+
+  const fromCache = await readFromCache(normalized);
+  if (fromCache) {
+    stats.cache++;
+    return { page: fromCache, origin: "cache" };
+  }
+
+  if (WIKI_OFFLINE) throw new WikiOfflineMissError(normalized);
+
+  const page = await fetchPageFromApi(normalized);
+  await writeToCache(normalized, page);
+  stats.network++;
+  return { page, origin: "network" };
+}
+
+/** Expande um artigo: título canônico e vizinhos ordenados por posição no corpo. */
+export async function fetchPage(title: string): Promise<PageOutlinks> {
+  const { page } = await fetchPageWithOrigin(title);
+  return page;
 }
 
 /** Vizinhos de saída de um artigo, na ordem em que os links aparecem no corpo. */

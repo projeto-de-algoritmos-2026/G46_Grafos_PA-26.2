@@ -8,7 +8,7 @@
  * de custo fazem sentido.
  */
 
-import { fetchPage } from "@/lib/wiki/client";
+import { fetchPageWithOrigin } from "@/lib/wiki/client";
 import { getRequestCount, resetRequestCount } from "@/lib/wiki/ratelimit";
 
 function parseArgs(argv: string[]): { title: string; limit: number } {
@@ -47,11 +47,12 @@ async function main() {
 
   resetRequestCount();
   const startedAt = Date.now();
-  const page = await fetchPage(title);
+  const { page, origin } = await fetchPageWithOrigin(title);
   const elapsedMs = Date.now() - startedAt;
 
   console.log(`consulta:  "${title}"`);
   console.log(`canônico:  "${page.source}"${page.source === title ? "" : "  (redirect resolvido)"}`);
+  console.log(`origem:    ${origin}`);
   console.log(`vizinhos:  ${page.neighbors.length}`);
   console.log(`requests:  ${getRequestCount()}`);
   console.log(`tempo:     ${elapsedMs} ms`);

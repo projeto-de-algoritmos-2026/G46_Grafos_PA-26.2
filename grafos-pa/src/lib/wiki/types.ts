@@ -25,6 +25,20 @@ export class WikiApiError extends Error {
   }
 }
 
+/**
+ * Expansão pedida em modo offline para um artigo que não está no dump nem no cache.
+ *
+ * É um erro distinto de propósito: como o dump é construído com teto de vértices, toda
+ * busca acaba tocando a borda dele. A camada de grafo (Fase 3) trata este erro como
+ * "vértice sem vizinhos conhecidos", enquanto os scripts de inspeção o deixam propagar.
+ */
+export class WikiOfflineMissError extends Error {
+  constructor(readonly title: string) {
+    super(`Modo offline: "${title}" não está no dump nem no cache`);
+    this.name = "WikiOfflineMissError";
+  }
+}
+
 /* Recortes das respostas da API — só os campos que o cliente consome. */
 
 interface ApiError {
