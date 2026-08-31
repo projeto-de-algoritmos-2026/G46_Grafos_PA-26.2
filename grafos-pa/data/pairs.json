@@ -1,0 +1,66 @@
+{
+  "lang": "pt",
+  "note": "Conjunto fixo de pares origem/destino. Toda medição da Fase 7 e a demo rodam sobre ele — mudar esta lista invalida os CSVs em data/results/.",
+  "pairs": [
+    {
+      "id": "p01",
+      "from": "Teoria dos grafos",
+      "to": "Leonhard Euler",
+      "note": "Controle: caminho curto e previsível, deve ser resolvido em 1-2 saltos."
+    },
+    {
+      "id": "p02",
+      "from": "Feijoada",
+      "to": "Japão",
+      "note": "Controle: destino é um hub, deve ser fácil por qualquer algoritmo."
+    },
+    {
+      "id": "p03",
+      "from": "Brasil",
+      "to": "Ludwig van Beethoven",
+      "note": "Par de referência do plano; origem hub, destino específico."
+    },
+    {
+      "id": "p04",
+      "from": "Café",
+      "to": "Revolução Francesa",
+      "note": "Dois domínios distantes ligados por história econômica."
+    },
+    {
+      "id": "p05",
+      "from": "Xadrez",
+      "to": "Fotossíntese",
+      "note": "Jogo para biologia: sem ligação temática, tende a passar por hubs."
+    },
+    {
+      "id": "p06",
+      "from": "Universidade de Brasília",
+      "to": "Álgebra linear",
+      "note": "Origem de baixo grau de saída, destino técnico."
+    },
+    {
+      "id": "p07",
+      "from": "Pelé",
+      "to": "Teoria da relatividade",
+      "note": "Esporte para física: caso onde o custo deve punir a passagem por hubs."
+    },
+    {
+      "id": "p08",
+      "from": "Bossa nova",
+      "to": "Guerra Fria",
+      "note": "Música para geopolítica, com ponte cronológica plausível."
+    },
+    {
+      "id": "p09",
+      "from": "Amazônia",
+      "to": "Mecânica quântica",
+      "note": "Par difícil: nenhuma ponte temática óbvia."
+    },
+    {
+      "id": "p10",
+      "from": "Chocolate",
+      "to": "Império Romano",
+      "note": "Par difícil: separado por continente e por milênios."
+    }
+  ]
+}
