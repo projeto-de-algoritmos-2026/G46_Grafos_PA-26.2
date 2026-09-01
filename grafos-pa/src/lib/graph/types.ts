@@ -28,6 +28,15 @@ export interface Edge {
   weight: number;
 }
 
+/**
+ * Entrada da lista de adjacência de um vértice: a origem está implícita em quem foi expandido.
+ * É o que a busca consome; `Edge` é a forma completa, usada para devolver o subgrafo explorado.
+ */
+export interface WeightedEdge {
+  to: NodeId;
+  weight: number;
+}
+
 /** Instrumentação de uma execução de busca. */
 export interface SearchMetrics {
   /** Vértices removidos da fronteira e expandidos. */
