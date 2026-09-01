@@ -3,8 +3,8 @@
  *
  *   npx tsx scripts/build-dump.ts [--depth N] [--max-nodes N]
  *
- * Faz uma BFS por saltos a partir de **todas as origens e todos os destinos ao mesmo tempo**,
- * com teto de vértices, e consolida tudo em `data/dump/graph.json.gz`.
+ * Faz uma BFS por saltos a partir de **todas as origens ao mesmo tempo**, com teto de vértices,
+ * e consolida tudo em `data/dump/graph.json.gz`.
  *
  * Duas propriedades importam mais que a estrutura da busca:
  *
@@ -26,7 +26,13 @@ import { getRequestCount, resetRequestCount } from "@/lib/wiki/ratelimit";
 import { normalizeTitle } from "@/lib/wiki/titles";
 
 const DEFAULT_DEPTH = 2;
-const DEFAULT_MAX_NODES = 1500;
+
+/**
+ * Teto de vértices. Dimensionado para cobrir a vizinhança completa das 10 origens, que somam
+ * 4941 links de saída: é o que garante que todo caminho de 2 saltos exista no dump. Abaixo
+ * disso a busca offline passa a maior parte do tempo batendo na borda.
+ */
+const DEFAULT_MAX_NODES = 5000;
 
 interface Pair {
   id: string;
@@ -104,9 +110,12 @@ async function main() {
   const { depth: maxDepth, maxNodes } = parseArgs(process.argv);
   const pairs = await readPairs();
 
-  // Origens e destinos entram como sementes de mesmo peso: expandir pelas duas pontas cobre
-  // o miolo do caminho com uma fração dos vértices que uma busca só a partir da origem gastaria.
-  const seeds = pairs.flatMap((pair) => [pair.from, pair.to]);
+  // Só as origens são sementes. Uma busca para frente nunca expande o destino — ela para
+  // quando o desenfileira, e os links de *saída* dele nunca são consultados. Semear pelos
+  // destinos gastava metade do orçamento em vizinhanças que nenhum dos algoritmos usa; medido,
+  // isso deixava 7 dos 10 pares sem caminho no modo offline. Expandir pelas duas pontas só
+  // faria sentido para busca bidirecional, que está em trabalhos futuros.
+  const seeds = pairs.map((pair) => pair.from);
 
   console.log(`pares:      ${pairs.length}  (${seeds.length} sementes)`);
   console.log(`orçamento:  ${maxNodes} vértices, profundidade ${maxDepth}`);

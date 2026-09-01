@@ -37,6 +37,28 @@ export interface WeightedEdge {
   weight: number;
 }
 
+/**
+ * O que uma busca precisa de um grafo: a vizinhança ponderada de um vértice.
+ *
+ * Existe para que o mesmo `bfs` e o mesmo motor das fases 5 e 6 rodem tanto sobre a Wikipédia
+ * (`LazyGraph`, assíncrono e caro) quanto sobre o grafo sintético de `fixtures.ts` (imediato).
+ * É o que permite verificar a corretude dos algoritmos sem tocar a rede.
+ */
+export interface Graph {
+  expand(nodeId: NodeId): Promise<WeightedEdge[]>;
+}
+
+/** Por que a busca parou. */
+export type StopReason =
+  /** Alcançou o destino. */
+  | "found"
+  /** Esgotou a fronteira sem alcançar o destino. */
+  | "exhausted"
+  /** Bateu no teto de expansões. */
+  | "expansions"
+  /** Estourou o tempo limite. */
+  | "timeout";
+
 /** Instrumentação de uma execução de busca. */
 export interface SearchMetrics {
   /** Vértices removidos da fronteira e expandidos. */
@@ -61,4 +83,10 @@ export interface PathResult {
   /** Arestas visitadas durante a busca. */
   explored: Edge[];
   metrics: SearchMetrics;
+  /**
+   * Distingue "não existe caminho" de "desisti antes de encontrar". Sem isso, um teto de
+   * expansões atingido seria indistinguível de um destino inalcançável, e o benchmark da
+   * Fase 7 registraria os dois como `found: false`.
+   */
+  stopReason: StopReason;
 }
