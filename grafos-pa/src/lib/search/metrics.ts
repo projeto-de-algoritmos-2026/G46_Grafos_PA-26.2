@@ -21,6 +21,8 @@ export class MetricsCollector {
   expanded = 0;
   /** Vértices inseridos na fronteira. */
   enqueued = 0;
+  /** Vértices fechados que voltaram à fronteira. Sempre 0 em BFS e com heurística consistente. */
+  reopened = 0;
 
   private readonly startedAt = performance.now();
   private readonly baseRequests = getRequestCount();
@@ -36,6 +38,7 @@ export class MetricsCollector {
     return {
       expanded: this.expanded,
       enqueued: this.enqueued,
+      reopened: this.reopened,
       requests: getRequestCount() - this.baseRequests,
       cacheHits: MetricsCollector.localHits() - this.baseLocalHits,
       pathCost,

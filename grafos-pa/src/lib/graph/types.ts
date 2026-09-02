@@ -65,6 +65,12 @@ export interface SearchMetrics {
   expanded: number;
   /** Vértices inseridos na fronteira. */
   enqueued: number;
+  /**
+   * Vértices já fechados que precisaram voltar à fronteira por terem sido alcançados mais
+   * barato depois. Com heurística consistente isto é sempre 0 — é a verificação empírica da
+   * prova de consistência da Fase 6, e o preço que a heurística ponderada paga.
+   */
+  reopened: number;
   /** Requisições HTTP gastas. */
   requests: number;
   /** Expansões atendidas pelo cache ou pelo dump. */

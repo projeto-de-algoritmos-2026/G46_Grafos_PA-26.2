@@ -9,34 +9,7 @@
 
 import type { Edge, Graph, NodeId, PathResult, StopReason } from "@/lib/graph/types";
 import { MetricsCollector } from "./metrics";
-
-/**
- * Limites de segurança. O grafo é materializado sob demanda e tem fator de ramificação alto:
- * sem teto, um par distante expande indefinidamente e leva junto a cota de requisições.
- */
-export interface SearchOptions {
-  /** Teto de vértices expandidos. */
-  maxExpansions?: number;
-  /** Tempo limite, em milissegundos. */
-  timeoutMs?: number;
-  /**
-   * Acumular o subgrafo explorado. Só a visualização da Fase 8 precisa dele, e ele cresce com
-   * o produto de expansões pelo grau de saída — dezenas de milhões de arestas numa busca larga.
-   * Desligado por padrão: achar o caminho é o trabalho da busca, e desenhar o que ela percorreu
-   * é um extra que só a Fase 8 pede — e que lá virá amostrado.
-   */
-  collectExplored?: boolean;
-}
-
-/**
- * Teto de expansões. Medido sobre os 10 pares: o mais caro (`Universidade de Brasília →
- * Álgebra linear`) precisa de 142 153 expansões para o BFS alcançar o destino. A maioria delas
- * é barata — são vértices da borda do dump, que respondem com lista vazia sem custo de rede —
- * mas todas contam como expansão, e um teto menor faz o baseline "não achar" caminhos que
- * existem.
- */
-export const DEFAULT_MAX_EXPANSIONS = 200_000;
-export const DEFAULT_TIMEOUT_MS = 60_000;
+import { DEFAULT_MAX_EXPANSIONS, DEFAULT_TIMEOUT_MS, type SearchOptions } from "./options";
 
 /** De onde cada vértice foi alcançado, para reconstruir o caminho ao final. */
 interface Arrival {

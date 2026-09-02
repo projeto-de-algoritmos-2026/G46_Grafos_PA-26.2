@@ -9,8 +9,11 @@
  * na Fase 6, e as componentes fortemente conexas na Fase 9.
  */
 
+import type { NodeId } from "@/lib/graph/types";
 import { bfs } from "@/lib/search/bfs";
 import { FIXTURE_CASE, FIXTURE_EDGES, FIXTURE_NODES, FixtureGraph } from "@/lib/search/fixtures";
+import { zeroHeuristic } from "@/lib/search/heuristics";
+import { bestFirstSearch } from "@/lib/search/search";
 
 const TOLERANCE = 1e-9;
 
@@ -79,12 +82,112 @@ async function verifyBfs(): Promise<void> {
   );
 }
 
+/**
+ * Floyd–Warshall, escrita aqui de propósito: é uma implementação independente, de derivação
+ * diferente da do Dijkstra, e por isso serve de referência. Se as duas concordam em todos os
+ * 225 pares ordenados do fixture, um erro teria que estar presente nas duas ao mesmo tempo.
+ */
+function floydWarshall(): Map<string, number> {
+  const distance = new Map<string, number>();
+  const at = (from: NodeId, to: NodeId) => distance.get(`${from}|${to}`) ?? Infinity;
+
+  for (const node of FIXTURE_NODES) distance.set(`${node}|${node}`, 0);
+  for (const [from, to, weight] of FIXTURE_EDGES) {
+    if (weight < at(from, to)) distance.set(`${from}|${to}`, weight);
+  }
+
+  for (const k of FIXTURE_NODES) {
+    for (const i of FIXTURE_NODES) {
+      for (const j of FIXTURE_NODES) {
+        const through = at(i, k) + at(k, j);
+        if (through < at(i, j)) distance.set(`${i}|${j}`, through);
+      }
+    }
+  }
+  return distance;
+}
+
+async function verifyDijkstra(): Promise<void> {
+  const graph = new FixtureGraph();
+  const reference = floydWarshall();
+
+  let compared = 0;
+  let divergent = 0;
+  let firstDivergence = "";
+
+  for (const source of FIXTURE_NODES) {
+    for (const target of FIXTURE_NODES) {
+      const result = await bestFirstSearch(graph, source, target, zeroHeuristic);
+      const expected = reference.get(`${source}|${target}`) ?? Infinity;
+      compared++;
+
+      const agrees = Number.isFinite(expected)
+        ? result.found && close(result.cost, expected)
+        : !result.found;
+
+      if (!agrees) {
+        divergent++;
+        if (!firstDivergence) {
+          firstDivergence =
+            `${source}→${target}: dijkstra ${result.found ? result.cost.toFixed(3) : "∞"} ` +
+            `vs floyd–warshall ${Number.isFinite(expected) ? expected.toFixed(3) : "∞"}`;
+        }
+      }
+    }
+  }
+
+  check(
+    "dijkstra == floyd-warshall",
+    divergent === 0,
+    divergent === 0 ? `${compared} pares ordenados conferem` : firstDivergence,
+  );
+
+  // O confronto direto com o baseline, no par canônico do fixture.
+  const { source, target, cheapest } = FIXTURE_CASE;
+  const viaBfs = await bfs(graph, source, target);
+  const viaDijkstra = await bestFirstSearch(graph, source, target, zeroHeuristic);
+
+  console.log(`dijkstra ${source} → ${target}`);
+  console.log(`  caminho:     ${asPath(viaDijkstra.path)}`);
+  console.log(`  saltos:      ${viaDijkstra.metrics.pathLength}`);
+  console.log(`  custo:       ${viaDijkstra.cost.toFixed(3)}`);
+  console.log(`  expandidos:  ${viaDijkstra.metrics.expanded}`);
+  console.log(`  reaberturas: ${viaDijkstra.metrics.reopened}`);
+  console.log();
+
+  check(
+    "dijkstra encontra o caminho de menor custo",
+    viaDijkstra.found && close(viaDijkstra.cost, cheapest.cost),
+    `${viaDijkstra.cost.toFixed(3)}, esperado ${cheapest.cost.toFixed(3)}`,
+  );
+
+  check(
+    "dijkstra acha caminho mais barato que o bfs",
+    viaDijkstra.cost < viaBfs.cost - TOLERANCE,
+    `${viaDijkstra.cost.toFixed(3)} < ${viaBfs.cost.toFixed(3)}`,
+  );
+
+  check(
+    "e mais longo em saltos que o do bfs",
+    viaDijkstra.metrics.pathLength > viaBfs.metrics.pathLength,
+    `${viaDijkstra.metrics.pathLength} > ${viaBfs.metrics.pathLength} saltos`,
+  );
+
+  // Com pesos não negativos, `h ≡ 0` é consistente, então nenhum vértice fechado é reaberto.
+  check(
+    "dijkstra não reabre vértice fechado",
+    viaDijkstra.metrics.reopened === 0,
+    `${viaDijkstra.metrics.reopened} reaberturas`,
+  );
+}
+
 async function main() {
   console.log("=== verificação sobre o grafo sintético ===");
   console.log(`fixture: ${FIXTURE_NODES.length} vértices, ${FIXTURE_EDGES.length} arestas`);
   console.log();
 
   await verifyBfs();
+  await verifyDijkstra();
 
   for (const { label, ok, detail } of checks) {
     console.log(`[${ok ? "OK  " : "FALHA"}] ${label.padEnd(52)} ${detail}`);

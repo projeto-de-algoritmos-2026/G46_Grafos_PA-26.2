@@ -10,10 +10,13 @@
  */
 
 import { LazyGraph } from "@/lib/graph/lazyGraph";
-import { bfs, DEFAULT_MAX_EXPANSIONS, DEFAULT_TIMEOUT_MS } from "@/lib/search/bfs";
+import { bfs } from "@/lib/search/bfs";
+import { zeroHeuristic } from "@/lib/search/heuristics";
+import { DEFAULT_MAX_EXPANSIONS, DEFAULT_TIMEOUT_MS } from "@/lib/search/options";
+import { bestFirstSearch } from "@/lib/search/search";
 import { WikiPageNotFoundError } from "@/lib/wiki/types";
 
-const ALGORITHMS = ["bfs"] as const;
+const ALGORITHMS = ["bfs", "dijkstra"] as const;
 type Algorithm = (typeof ALGORITHMS)[number];
 
 const isAlgorithm = (value: string): value is Algorithm =>
@@ -54,7 +57,10 @@ export async function GET(request: Request): Promise<Response> {
     // que "EUA" e "Estados Unidos" produzam exatamente o mesmo resultado.
     const source = await graph.resolve(from);
     const target = await graph.resolve(to);
-    const result = await bfs(graph, source, target, options);
+    const result =
+      algo === "bfs"
+        ? await bfs(graph, source, target, options)
+        : await bestFirstSearch(graph, source, target, zeroHeuristic, options);
 
     return Response.json({
       algo,
