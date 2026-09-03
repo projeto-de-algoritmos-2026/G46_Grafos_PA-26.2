@@ -12,8 +12,15 @@
 import type { NodeId } from "@/lib/graph/types";
 import { bfs } from "@/lib/search/bfs";
 import { FIXTURE_CASE, FIXTURE_EDGES, FIXTURE_NODES, FixtureGraph } from "@/lib/search/fixtures";
-import { zeroHeuristic } from "@/lib/search/heuristics";
-import { bestFirstSearch } from "@/lib/search/search";
+import { EPSILON } from "@/lib/graph/cost.config";
+import {
+  admissibleHeuristic,
+  DEFAULT_LAMBDA,
+  titleSimilarity,
+  weightedHeuristic,
+  zeroHeuristic,
+} from "@/lib/search/heuristics";
+import { astar, bestFirstSearch, dijkstra } from "@/lib/search/search";
 
 const TOLERANCE = 1e-9;
 
@@ -181,6 +188,128 @@ async function verifyDijkstra(): Promise<void> {
   );
 }
 
+async function verifyAstar(): Promise<void> {
+  const graph = new FixtureGraph();
+
+  let equivalentCost = 0;
+  let equivalentExpansions = 0;
+  let optimalCost = 0;
+  let reopened = 0;
+  let compared = 0;
+  let firstDivergence = "";
+
+  for (const source of FIXTURE_NODES) {
+    for (const target of FIXTURE_NODES) {
+      const reference = await dijkstra(graph, source, target);
+      const withZero = await astar(graph, source, target, zeroHeuristic);
+      const withAdmissible = await astar(graph, source, target, admissibleHeuristic(target));
+      compared++;
+
+      // 1. O motor é o mesmo: mesma resposta E mesmo trabalho.
+      if (withZero.found === reference.found && close(withZero.cost, reference.cost)) {
+        equivalentCost++;
+      }
+      if (withZero.metrics.expanded === reference.metrics.expanded) equivalentExpansions++;
+
+      // 2. A heurística admissível não estraga a otimalidade.
+      if (withAdmissible.found === reference.found && close(withAdmissible.cost, reference.cost)) {
+        optimalCost++;
+      } else if (!firstDivergence) {
+        firstDivergence =
+          `${source}→${target}: a* ${withAdmissible.cost.toFixed(3)} ` +
+          `vs ótimo ${reference.cost.toFixed(3)}`;
+      }
+
+      // 3. Consistência implica não reabrir vértice fechado.
+      reopened += withAdmissible.metrics.reopened;
+    }
+  }
+
+  check(
+    "astar(h=0) == dijkstra (custo)",
+    equivalentCost === compared,
+    `${equivalentCost}/${compared} pares`,
+  );
+  check(
+    "astar(h=0) == dijkstra (nós expandidos)",
+    equivalentExpansions === compared,
+    `${equivalentExpansions}/${compared} pares`,
+  );
+  check(
+    "astar(h admissível) == dijkstra (custo)",
+    optimalCost === compared,
+    optimalCost === compared ? `${compared} pares` : firstDivergence,
+  );
+  check(
+    "astar(h admissível) não reabre vértice fechado",
+    reopened === 0,
+    `${reopened} reaberturas em ${compared} buscas`,
+  );
+
+  // Consistência conferida aresta a aresta, que é a hipótese da qual "não reabre" decorre.
+  let inconsistent = 0;
+  let worstSlack = Infinity;
+  for (const target of FIXTURE_NODES) {
+    const h = admissibleHeuristic(target);
+    for (const [from, to, weight] of FIXTURE_EDGES) {
+      const slack = weight - (h(from) - h(to));
+      if (slack < worstSlack) worstSlack = slack;
+      if (slack < -TOLERANCE) inconsistent++;
+    }
+  }
+  check(
+    "consistência h(u) − h(v) ≤ w(u,v)",
+    inconsistent === 0,
+    `${FIXTURE_EDGES.length * FIXTURE_NODES.length} arestas, folga mínima ${worstSlack.toFixed(3)}`,
+  );
+
+  // O limite h ≤ ε é o que sustenta a prova de admissibilidade; conferido sobre títulos reais,
+  // onde a semelhança de fato varia (no fixture os rótulos têm uma letra e sim é degenerada).
+  const realTitles = [
+    ["Brasil", "Ludwig van Beethoven"],
+    ["Bona", "Ludwig van Beethoven"],
+    ["Alemanha", "Ludwig van Beethoven"],
+    ["Guerra Fria", "Guerra do Vietnã"],
+    ["Alemanha", "Alemão"],
+    ["Roma", "Aroma"],
+    ["Café", "Revolução Francesa"],
+  ] as const;
+
+  console.log("semelhança entre títulos reais (sinal da heurística)");
+  let aboveEpsilon = 0;
+  for (const [a, b] of realTitles) {
+    const sim = titleSimilarity(a, b);
+    const h = EPSILON * (1 - sim);
+    if (h > EPSILON + TOLERANCE) aboveEpsilon++;
+    console.log(`  sim(${`${a} , ${b}`.padEnd(42)}) = ${sim.toFixed(3)}   h = ${h.toFixed(4)}`);
+  }
+  console.log();
+
+  check(
+    "h admissível respeita o limite h ≤ ε",
+    aboveEpsilon === 0,
+    `ε = ${EPSILON}, ${realTitles.length} pares reais`,
+  );
+
+  // Informativo: no fixture os rótulos de uma letra fazem sim ≈ 0 para todo v ≠ t, então a
+  // heurística ponderada vira uma constante e não altera a ordem de expansão. A subotimalidade
+  // dela só aparece sobre títulos reais — é o que a Fase 7 mede.
+  const { source, target, cheapest } = FIXTURE_CASE;
+  const weighted = await astar(graph, source, target, weightedHeuristic(target, DEFAULT_LAMBDA));
+  const ratio = weighted.found ? weighted.cost / cheapest.cost : Infinity;
+  console.log(
+    `astar(h ponderada, λ=${DEFAULT_LAMBDA}): custo ${weighted.cost.toFixed(3)} ` +
+      `vs ótimo ${cheapest.cost.toFixed(3)}, razão ${ratio.toFixed(3)} ` +
+      `(informativo — pode ser subótimo)`,
+  );
+  console.log(
+    `  expandidos ${weighted.metrics.expanded} contra ${
+      (await dijkstra(graph, source, target)).metrics.expanded
+    } do dijkstra, ${weighted.metrics.reopened} reaberturas`,
+  );
+  console.log();
+}
+
 async function main() {
   console.log("=== verificação sobre o grafo sintético ===");
   console.log(`fixture: ${FIXTURE_NODES.length} vértices, ${FIXTURE_EDGES.length} arestas`);
@@ -188,6 +317,7 @@ async function main() {
 
   await verifyBfs();
   await verifyDijkstra();
+  await verifyAstar();
 
   for (const { label, ok, detail } of checks) {
     console.log(`[${ok ? "OK  " : "FALHA"}] ${label.padEnd(52)} ${detail}`);

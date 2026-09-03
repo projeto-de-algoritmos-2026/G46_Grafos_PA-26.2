@@ -17,6 +17,9 @@
  */
 
 import type { Edge, Graph, NodeId, PathResult, StopReason } from "@/lib/graph/types";
+// `heuristics.ts` importa `Heuristic` daqui, mas só como tipo — a importação é apagada na
+// compilação, então não há ciclo em tempo de execução.
+import { zeroHeuristic } from "./heuristics";
 import { MetricsCollector } from "./metrics";
 import { MinHeap } from "./priorityQueue";
 import { DEFAULT_MAX_EXPANSIONS, DEFAULT_TIMEOUT_MS, type SearchOptions } from "./options";
@@ -120,4 +123,28 @@ export async function bestFirstSearch(
   }
 
   return finish("exhausted");
+}
+
+/**
+ * Dijkstra: o motor com `h ≡ 0`. Não há implementação separada — se houvesse, seria uma
+ * segunda chance de errar.
+ */
+export function dijkstra(
+  graph: Graph,
+  source: NodeId,
+  target: NodeId,
+  options: SearchOptions = {},
+): Promise<PathResult> {
+  return bestFirstSearch(graph, source, target, zeroHeuristic, options);
+}
+
+/** A*: o mesmo motor, com heurística. Ver as provas em `heuristics.ts`. */
+export function astar(
+  graph: Graph,
+  source: NodeId,
+  target: NodeId,
+  heuristic: Heuristic,
+  options: SearchOptions = {},
+): Promise<PathResult> {
+  return bestFirstSearch(graph, source, target, heuristic, options);
 }

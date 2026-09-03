@@ -11,12 +11,12 @@
 
 import { LazyGraph } from "@/lib/graph/lazyGraph";
 import { bfs } from "@/lib/search/bfs";
-import { zeroHeuristic } from "@/lib/search/heuristics";
+import { admissibleHeuristic, weightedHeuristic } from "@/lib/search/heuristics";
 import { DEFAULT_MAX_EXPANSIONS, DEFAULT_TIMEOUT_MS } from "@/lib/search/options";
-import { bestFirstSearch } from "@/lib/search/search";
+import { astar, dijkstra } from "@/lib/search/search";
 import { WikiPageNotFoundError } from "@/lib/wiki/types";
 
-const ALGORITHMS = ["bfs", "dijkstra"] as const;
+const ALGORITHMS = ["bfs", "dijkstra", "astar"] as const;
 type Algorithm = (typeof ALGORITHMS)[number];
 
 const isAlgorithm = (value: string): value is Algorithm =>
@@ -57,13 +57,28 @@ export async function GET(request: Request): Promise<Response> {
     // que "EUA" e "Estados Unidos" produzam exatamente o mesmo resultado.
     const source = await graph.resolve(from);
     const target = await graph.resolve(to);
-    const result =
-      algo === "bfs"
-        ? await bfs(graph, source, target, options)
-        : await bestFirstSearch(graph, source, target, zeroHeuristic, options);
+    // `lambda` só faz sentido com A*: presente, escolhe a variante ponderada e não admissível;
+    // ausente, A* usa a heurística admissível, que preserva a otimalidade.
+    const rawLambda = params.get("lambda");
+    const lambda = rawLambda === null ? undefined : Number(rawLambda);
+    if (lambda !== undefined && (!Number.isFinite(lambda) || lambda <= 0)) {
+      return Response.json({ error: "'lambda' deve ser um número positivo" }, { status: 400 });
+    }
+
+    let result;
+    if (algo === "bfs") {
+      result = await bfs(graph, source, target, options);
+    } else if (algo === "dijkstra") {
+      result = await dijkstra(graph, source, target, options);
+    } else {
+      const heuristic =
+        lambda === undefined ? admissibleHeuristic(target) : weightedHeuristic(target, lambda);
+      result = await astar(graph, source, target, heuristic, options);
+    }
 
     return Response.json({
       algo,
+      ...(algo === "astar" && { heuristic: lambda === undefined ? "admissível" : `ponderada λ=${lambda}` }),
       source,
       target,
       found: result.found,
