@@ -16,9 +16,10 @@
  *   no heap, para que duas execuções do benchmark devolvam o mesmo caminho.
  */
 
-import type { Edge, Graph, NodeId, PathResult, StopReason } from "@/lib/graph/types";
+import type { Graph, NodeId, PathResult, StopReason } from "@/lib/graph/types";
 // `heuristics.ts` importa `Heuristic` daqui, mas só como tipo — a importação é apagada na
 // compilação, então não há ciclo em tempo de execução.
+import { type Arrival, sampleExploredTree } from "./explored";
 import { zeroHeuristic } from "./heuristics";
 import { MetricsCollector } from "./metrics";
 import { MinHeap } from "./priorityQueue";
@@ -43,12 +44,14 @@ export async function bestFirstSearch(
   const deadline = Date.now() + timeoutMs;
 
   const metrics = new MetricsCollector();
-  const explored: Edge[] = [];
 
   /** Melhor custo conhecido da origem até cada vértice. */
   const g = new Map<NodeId, number>([[source, 0]]);
-  const parents = new Map<NodeId, NodeId>();
+  /** Árvore de predecessores: reconstrói o caminho e, na Fase 8, é o subgrafo desenhado. */
+  const parents = new Map<NodeId, Arrival>();
   const closed = new Set<NodeId>();
+  /** Ordem de expansão, insumo da amostra do desenho. Só acumulada quando há o que desenhar. */
+  const expandedOrder: NodeId[] = [];
 
   const frontier = new MinHeap();
   frontier.push(source, heuristic(source));
@@ -57,9 +60,9 @@ export async function bestFirstSearch(
   const reconstruct = (): { path: NodeId[]; cost: number } => {
     const path: NodeId[] = [target];
     for (let node = target; node !== source; ) {
-      const parent = parents.get(node);
-      if (parent === undefined) break;
-      node = parent;
+      const arrival = parents.get(node);
+      if (arrival === undefined) break;
+      node = arrival.from;
       path.push(node);
     }
     return { path: path.reverse(), cost: g.get(target) ?? 0 };
@@ -72,7 +75,9 @@ export async function bestFirstSearch(
       found: stopReason === "found",
       path,
       cost,
-      explored,
+      explored: collectExplored
+        ? sampleExploredTree(parents, expandedOrder, path, options.exploredLimit)
+        : [],
       metrics: metrics.finish(cost, Math.max(path.length - 1, 0)),
       stopReason,
     };
@@ -91,20 +96,19 @@ export async function bestFirstSearch(
     if (node === target) return finish("found");
 
     closed.add(node);
+    if (collectExplored) expandedOrder.push(node);
     const neighbors = await graph.expand(node);
     metrics.expanded++;
 
     const gNode = g.get(node)!;
 
     for (const { to, weight } of neighbors) {
-      if (collectExplored) explored.push({ from: node, to, weight });
-
       const tentative = gNode + weight;
       const known = g.get(to);
       if (known !== undefined && tentative >= known) continue;
 
       g.set(to, tentative);
-      parents.set(to, node);
+      parents.set(to, { from: node, weight });
 
       if (closed.has(to)) {
         // Só acontece com heurística não consistente. Ver `reopened` em `SearchMetrics`.

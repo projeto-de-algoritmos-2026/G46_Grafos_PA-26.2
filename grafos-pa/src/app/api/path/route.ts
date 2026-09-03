@@ -5,12 +5,17 @@
  * cliente HTTP — são de Node, e porque expandir o grafo a partir do navegador multiplicaria as
  * requisições à Wikipédia por usuário.
  *
- * `algo` ganha `dijkstra` na Fase 5 e `astar` na Fase 6; o subgrafo explorado passa a ser
- * devolvido na Fase 8, quando houver o que desenhar com ele.
+ * Além do caminho e das métricas, a rota devolve o **subgrafo explorado** — a árvore de busca
+ * amostrada de `explored.ts` — que é o que a visualização desenha. Ele é montado aqui, e não na
+ * busca, porque a forma de que o `react-force-graph` precisa (`nodes`/`links`) é detalhe de
+ * apresentação e não tem por que contaminar o motor.
  */
 
+import type { NodeRole, PathResponse, Subgraph } from "@/lib/api/types";
 import { LazyGraph } from "@/lib/graph/lazyGraph";
+import type { Edge, NodeId } from "@/lib/graph/types";
 import { bfs } from "@/lib/search/bfs";
+import { DEFAULT_EXPLORED_LIMIT } from "@/lib/search/explored";
 import { admissibleHeuristic, weightedHeuristic } from "@/lib/search/heuristics";
 import { DEFAULT_MAX_EXPANSIONS, DEFAULT_TIMEOUT_MS } from "@/lib/search/options";
 import { astar, dijkstra } from "@/lib/search/search";
@@ -29,6 +34,51 @@ function readNumber(raw: string | null, fallback: number, max: number): number {
   return Math.min(value, max);
 }
 
+/**
+ * Converte a árvore amostrada na forma do desenho, marcando o papel de cada vértice.
+ *
+ * Os vértices saem das pontas das arestas: a árvore de busca cobre todo vértice descoberto
+ * exceto a origem, que não tem aresta de entrada e por isso é semeada à parte.
+ */
+function buildSubgraph(
+  explored: Edge[],
+  path: NodeId[],
+  source: NodeId,
+  target: NodeId,
+  expanded: number,
+  limit: number,
+): Subgraph {
+  const pathNodes = new Set(path);
+  // Pares consecutivos do caminho, para distinguir a aresta usada da aresta que apenas liga
+  // dois vértices do caminho — num grafo denso os dois casos coexistem.
+  const pathEdges = new Set(path.slice(1).map((node, i) => `${path[i]}\u0000${node}`));
+
+  const roleOf = (id: NodeId): NodeRole => {
+    if (id === source) return "source";
+    if (id === target) return "target";
+    return pathNodes.has(id) ? "path" : "visited";
+  };
+
+  const nodes = new Map<NodeId, NodeRole>([[source, "source"]]);
+  const links = explored.map((edge) => {
+    nodes.set(edge.from, roleOf(edge.from));
+    nodes.set(edge.to, roleOf(edge.to));
+    return {
+      source: edge.from,
+      target: edge.to,
+      weight: edge.weight,
+      inPath: pathEdges.has(`${edge.from}\u0000${edge.to}`),
+    };
+  });
+
+  return {
+    nodes: [...nodes].map(([id, role]) => ({ id, role })),
+    links,
+    expanded,
+    truncated: explored.length >= limit,
+  };
+}
+
 export async function GET(request: Request): Promise<Response> {
   const params = new URL(request.url).searchParams;
   const from = params.get("from")?.trim();
@@ -45,9 +95,14 @@ export async function GET(request: Request): Promise<Response> {
     );
   }
 
+  // O teto de nós desenhados é da apresentação, não da busca: mexer nele muda o tamanho da
+  // figura, nunca o caminho encontrado nem as métricas.
+  const exploredLimit = readNumber(params.get("maxNodes"), DEFAULT_EXPLORED_LIMIT, 5_000);
   const options = {
     maxExpansions: readNumber(params.get("maxExpansions"), DEFAULT_MAX_EXPANSIONS, 500_000),
     timeoutMs: readNumber(params.get("timeoutMs"), DEFAULT_TIMEOUT_MS, 120_000),
+    collectExplored: true,
+    exploredLimit,
   };
 
   const graph = new LazyGraph();
@@ -76,7 +131,7 @@ export async function GET(request: Request): Promise<Response> {
       result = await astar(graph, source, target, heuristic, options);
     }
 
-    return Response.json({
+    const response: PathResponse = {
       algo,
       ...(algo === "astar" && { heuristic: lambda === undefined ? "admissível" : `ponderada λ=${lambda}` }),
       source,
@@ -87,9 +142,16 @@ export async function GET(request: Request): Promise<Response> {
       cost: result.cost,
       metrics: result.metrics,
       graph: graph.stats(),
-      // O subgrafo explorado não é coletado aqui: uma busca larga percorre dezenas de milhões
-      // de arestas e ele só serve para desenhar. A Fase 8 liga a coleta, amostrada.
-    });
+      subgraph: buildSubgraph(
+        result.explored,
+        result.path,
+        source,
+        target,
+        result.metrics.expanded,
+        exploredLimit,
+      ),
+    };
+    return Response.json(response);
   } catch (error) {
     if (error instanceof WikiPageNotFoundError) {
       return Response.json({ error: error.message }, { status: 404 });

@@ -11,11 +11,13 @@ export interface SearchOptions {
   /** Tempo limite, em milissegundos. */
   timeoutMs?: number;
   /**
-   * Acumular o subgrafo explorado. Ele cresce com o produto de expansões pelo grau de saída —
-   * dezenas de milhões de arestas numa busca larga — e só a visualização da Fase 8 precisa
-   * dele. Desligado por padrão; lá virá amostrado.
+   * Devolver o subgrafo explorado, amostrado como árvore de busca — ver `explored.ts` para o
+   * porquê da amostragem. Desligado por padrão: só a visualização precisa dele, e o benchmark
+   * não pode pagar a montagem.
    */
   collectExplored?: boolean;
+  /** Teto de vértices no subgrafo devolvido. Ver `DEFAULT_EXPLORED_LIMIT`. */
+  exploredLimit?: number;
 }
 
 /**

@@ -7,15 +7,10 @@
  * No grafo sintético a separação é de 1,8 contra 0,8; na Wikipédia é o que a Fase 7 mede.
  */
 
-import type { Edge, Graph, NodeId, PathResult, StopReason } from "@/lib/graph/types";
+import type { Graph, NodeId, PathResult, StopReason } from "@/lib/graph/types";
+import { type Arrival, sampleExploredTree } from "./explored";
 import { MetricsCollector } from "./metrics";
 import { DEFAULT_MAX_EXPANSIONS, DEFAULT_TIMEOUT_MS, type SearchOptions } from "./options";
-
-/** De onde cada vértice foi alcançado, para reconstruir o caminho ao final. */
-interface Arrival {
-  from: NodeId;
-  weight: number;
-}
 
 function reconstruct(
   parents: Map<NodeId, Arrival>,
@@ -48,9 +43,10 @@ export async function bfs(
   const deadline = Date.now() + timeoutMs;
 
   const metrics = new MetricsCollector();
-  const explored: Edge[] = [];
   const parents = new Map<NodeId, Arrival>();
   const visited = new Set<NodeId>([source]);
+  /** Ordem de expansão, insumo da amostra do desenho. Só acumulada quando há o que desenhar. */
+  const expandedOrder: NodeId[] = [];
 
   // Fila com índice de cabeça em vez de `shift()`: remover do início de um array é O(n), e com
   // dezenas de milhares de vértices enfileirados isso dominaria o tempo de execução.
@@ -65,7 +61,9 @@ export async function bfs(
       found: stopReason === "found",
       path,
       cost,
-      explored,
+      explored: collectExplored
+        ? sampleExploredTree(parents, expandedOrder, path, options.exploredLimit)
+        : [],
       metrics: metrics.finish(cost, Math.max(path.length - 1, 0)),
       stopReason,
     };
@@ -81,11 +79,11 @@ export async function bfs(
     // mesma coisa aqui e no motor das fases 5 e 6 — sem isso a comparação seria enviesada.
     if (node === target) return finish("found");
 
+    if (collectExplored) expandedOrder.push(node);
     const neighbors = await graph.expand(node);
     metrics.expanded++;
 
     for (const { to, weight } of neighbors) {
-      if (collectExplored) explored.push({ from: node, to, weight });
       if (visited.has(to)) continue;
 
       visited.add(to);
