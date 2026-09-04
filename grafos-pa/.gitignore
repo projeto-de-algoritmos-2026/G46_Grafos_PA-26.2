@@ -20,8 +20,11 @@
 # production
 /build
 
-# dados gerados (data/pairs.json e data/dump/ são versionados)
+# dados gerados (data/pairs.json, data/dump/ e data/results/ são versionados)
 /data/cache/
+
+# ambiente do script de gráfico (ver README, seção 6)
+/.venv/
 
 # misc
 .DS_Store

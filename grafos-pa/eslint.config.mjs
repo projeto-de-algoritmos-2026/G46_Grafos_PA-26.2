@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ambiente Python do `scripts/plot.py`: o matplotlib traz o JS dos seus backends web, que
+    // não é código deste projeto e reprovaria no lint.
+    ".venv/**",
   ]),
 ]);
 

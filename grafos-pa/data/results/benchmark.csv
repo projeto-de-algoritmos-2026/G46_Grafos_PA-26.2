@@ -1,41 +1,41 @@
 pair_id,source,target,algo,lambda,path_length,path_cost,expanded,productive_expansions,frontier_misses,enqueued,reopened,requests,cache_hits,elapsed_ms,optimal_cost,suboptimality_ratio,found,stop_reason
-p01,Teoria dos grafos,Leonhard Euler,bfs,,1,0.511,10,10,0,2228,0,0,10,0.87,0.511,1,true,found
-p01,Teoria dos grafos,Leonhard Euler,dijkstra,,1,0.511,64,61,3,2421,0,0,61,2.783,0.511,1,true,found
-p01,Teoria dos grafos,Leonhard Euler,astar-admissible,,1,0.511,38,38,0,1161,0,0,38,7.716,0.511,1,true,found
-p01,Teoria dos grafos,Leonhard Euler,astar-weighted,0.5,1,0.511,1,1,0,158,0,0,1,1.193,0.511,1,true,found
-p02,Feijoada,Japão,bfs,,2,1.1879,116,116,0,18577,0,0,116,7.206,1.1879,1,true,found
-p02,Feijoada,Japão,dijkstra,,2,1.1879,3640,596,3044,41002,0,0,596,184.705,1.1879,1,true,found
-p02,Feijoada,Japão,astar-admissible,,2,1.1879,1810,362,1448,28248,0,0,362,185.702,1.1879,1,true,found
-p02,Feijoada,Japão,astar-weighted,0.5,2,1.1879,136,48,88,2477,0,0,48,12.003,1.1879,1,true,found
-p03,Brasil,Ludwig van Beethoven,bfs,,2,1.5279,60174,3680,56494,190211,0,0,3680,2918.27,1.1706,1.305217,true,found
-p03,Brasil,Ludwig van Beethoven,dijkstra,,2,1.1706,61184,3610,57574,172224,0,0,3610,4060.847,1.1706,1,true,found
-p03,Brasil,Ludwig van Beethoven,astar-admissible,,2,1.1706,38506,3095,35411,158874,0,0,3095,3634.589,1.1706,1,true,found
-p03,Brasil,Ludwig van Beethoven,astar-weighted,0.5,2,1.1706,1810,927,883,57200,0,0,927,448.311,1.1706,1,true,found
-p04,Café,Revolução Francesa,bfs,,2,1.2832,7641,1248,6393,115046,0,0,1248,615.553,1.0415,1.232072,true,found
-p04,Café,Revolução Francesa,dijkstra,,2,1.0415,10528,1213,9315,78759,0,0,1213,620.484,1.0415,1,true,found
-p04,Café,Revolução Francesa,astar-admissible,,2,1.0415,5235,801,4434,56942,0,0,801,587.483,1.0415,1,true,found
-p04,Café,Revolução Francesa,astar-weighted,0.5,2,1.0415,127,98,29,9482,0,0,98,49.924,1.0415,1,true,found
-p05,Xadrez,Fotossíntese,bfs,,2,1.094,14122,2779,11343,163818,0,0,2779,687.225,1.094,1,true,found
-p05,Xadrez,Fotossíntese,dijkstra,,2,1.094,15593,1601,13992,92924,0,0,1601,3313.273,1.094,1,true,found
-p05,Xadrez,Fotossíntese,astar-admissible,,2,1.094,9106,1082,8024,68620,0,0,1082,1536.509,1.094,1,true,found
-p05,Xadrez,Fotossíntese,astar-weighted,0.5,2,1.094,498,279,219,13009,0,0,279,66.331,1.094,1,true,found
-p06,Universidade de Brasília,Álgebra linear,bfs,,3,1.8375,142152,5038,137114,210862,0,0,5038,28204.144,1.3322,1.379292,true,found
-p06,Universidade de Brasília,Álgebra linear,dijkstra,,3,1.3322,30997,2954,28043,153520,0,0,2954,5975.383,1.3322,1,true,found
-p06,Universidade de Brasília,Álgebra linear,astar-admissible,,3,1.3322,20101,2297,17804,129983,0,0,2297,4535.779,1.3322,1,true,found
-p06,Universidade de Brasília,Álgebra linear,astar-weighted,0.5,3,1.3322,1787,447,1340,30457,0,0,447,369.809,1.3322,1,true,found
-p07,Pelé,Teoria da relatividade,bfs,,3,1.6926,78473,3998,74475,199303,0,0,3998,10206.988,1.1962,1.414907,true,found
-p07,Pelé,Teoria da relatividade,dijkstra,,3,1.1962,40275,2795,37480,160742,0,0,2795,8740.589,1.1962,1,true,found
-p07,Pelé,Teoria da relatividade,astar-admissible,,3,1.1962,25533,2070,23463,133501,0,0,2070,14173.67,1.1962,1,true,found
-p07,Pelé,Teoria da relatividade,astar-weighted,0.5,3,1.1962,3225,783,2442,61766,0,0,783,665.473,1.1962,1,true,found
-p08,Bossa nova,Guerra Fria,bfs,,2,1.0468,1505,600,905,60563,0,0,600,83.905,0.8694,1.203998,true,found
-p08,Bossa nova,Guerra Fria,dijkstra,,2,0.8694,2580,530,2050,39912,0,0,530,213.812,0.8694,1,true,found
-p08,Bossa nova,Guerra Fria,astar-admissible,,2,0.8694,1147,372,775,26968,0,0,372,207.74,0.8694,1,true,found
-p08,Bossa nova,Guerra Fria,astar-weighted,0.5,2,0.8694,36,36,0,2172,0,0,36,17.833,0.8694,1,true,found
-p09,Amazônia,Mecânica quântica,bfs,,2,1.3923,14735,2746,11989,162092,0,0,2746,1107.045,1.3844,1.005706,true,found
-p09,Amazônia,Mecânica quântica,dijkstra,,2,1.3844,57570,3671,53899,173760,0,0,3671,4868.154,1.3844,1,true,found
-p09,Amazônia,Mecânica quântica,astar-admissible,,2,1.3844,40791,3188,37603,153679,0,0,3188,4647.529,1.3844,1,true,found
-p09,Amazônia,Mecânica quântica,astar-weighted,0.5,2,1.3844,5648,943,4705,56052,0,0,943,1252.628,1.3844,1,true,found
-p10,Chocolate,Império Romano,bfs,,2,1.575,2101,848,1253,68630,0,0,848,217.985,0.9525,1.653546,true,found
-p10,Chocolate,Império Romano,dijkstra,,2,0.9525,6428,997,5431,60016,0,0,997,453.106,0.9525,1,true,found
-p10,Chocolate,Império Romano,astar-admissible,,2,0.9525,3186,663,2523,43483,0,0,663,481.636,0.9525,1,true,found
-p10,Chocolate,Império Romano,astar-weighted,0.5,2,0.9525,123,106,17,4779,0,0,106,23.715,0.9525,1,true,found
+p01,Teoria dos grafos,Leonhard Euler,bfs,,1,0.511,10,10,0,2228,0,0,10,0.525,0.511,1,true,found
+p01,Teoria dos grafos,Leonhard Euler,dijkstra,,1,0.511,64,61,3,2421,0,0,61,1.58,0.511,1,true,found
+p01,Teoria dos grafos,Leonhard Euler,astar-admissible,,1,0.511,38,38,0,1161,0,0,38,4.447,0.511,1,true,found
+p01,Teoria dos grafos,Leonhard Euler,astar-weighted,0.5,1,0.511,1,1,0,158,0,0,1,0.394,0.511,1,true,found
+p02,Feijoada,Japão,bfs,,2,1.1879,116,116,0,18577,0,0,116,2.951,1.1879,1,true,found
+p02,Feijoada,Japão,dijkstra,,2,1.1879,3592,555,3037,39903,0,0,555,110.678,1.1879,1,true,found
+p02,Feijoada,Japão,astar-admissible,,2,1.1879,1792,338,1454,27601,0,0,338,111.161,1.1879,1,true,found
+p02,Feijoada,Japão,astar-weighted,0.5,2,1.1879,136,48,88,2477,0,0,48,8.391,1.1879,1,true,found
+p03,Brasil,Ludwig van Beethoven,bfs,,2,1.5279,60174,3370,56804,181063,0,0,3370,1809.115,1.1706,1.305217,true,found
+p03,Brasil,Ludwig van Beethoven,dijkstra,,2,1.1706,60584,3286,57298,164318,0,0,3286,2063.155,1.1706,1,true,found
+p03,Brasil,Ludwig van Beethoven,astar-admissible,,2,1.1706,38277,2868,35409,153619,0,0,2868,1851.067,1.1706,1,true,found
+p03,Brasil,Ludwig van Beethoven,astar-weighted,0.5,2,1.1706,1810,920,890,57153,0,0,920,230.041,1.1706,1,true,found
+p04,Café,Revolução Francesa,bfs,,2,1.2832,7641,1131,6510,108879,0,0,1131,225.167,1.0415,1.232072,true,found
+p04,Café,Revolução Francesa,dijkstra,,2,1.0415,10475,1108,9367,75375,0,0,1108,391.02,1.0415,1,true,found
+p04,Café,Revolução Francesa,astar-admissible,,2,1.0415,5230,754,4476,54230,0,0,754,331.549,1.0415,1,true,found
+p04,Café,Revolução Francesa,astar-weighted,0.5,2,1.0415,127,98,29,9482,0,0,98,26.663,1.0415,1,true,found
+p05,Xadrez,Fotossíntese,bfs,,2,1.094,14122,2549,11573,155379,0,0,2549,411.661,1.094,1,true,found
+p05,Xadrez,Fotossíntese,dijkstra,,2,1.094,15201,1395,13806,87434,0,0,1395,554.532,1.094,1,true,found
+p05,Xadrez,Fotossíntese,astar-admissible,,2,1.094,8967,971,7996,65230,0,0,971,715.421,1.094,1,true,found
+p05,Xadrez,Fotossíntese,astar-weighted,0.5,2,1.094,494,278,216,12929,0,0,278,157.586,1.094,1,true,found
+p06,Universidade de Brasília,Álgebra linear,bfs,,3,1.8375,141019,4527,136492,198572,0,0,4527,5020.163,1.4007,1.311851,true,found
+p06,Universidade de Brasília,Álgebra linear,dijkstra,,3,1.4007,40527,3091,37436,161437,0,0,3091,1369.911,1.4007,1,true,found
+p06,Universidade de Brasília,Álgebra linear,astar-admissible,,3,1.4007,26637,2557,24080,141796,0,0,2557,1338.536,1.4007,1,true,found
+p06,Universidade de Brasília,Álgebra linear,astar-weighted,0.5,3,1.4007,2612,523,2089,34521,0,0,523,199.829,1.4007,1,true,found
+p07,Pelé,Teoria da relatividade,bfs,,3,1.6926,76809,3652,73157,188441,0,0,3652,2223.165,1.4162,1.195117,true,found
+p07,Pelé,Teoria da relatividade,dijkstra,,3,1.4162,84325,3855,80470,184943,0,0,3855,2821.028,1.4162,1,true,found
+p07,Pelé,Teoria da relatividade,astar-admissible,,3,1.4162,63000,3358,59642,173696,0,0,3358,2831.503,1.4162,1,true,found
+p07,Pelé,Teoria da relatividade,astar-weighted,0.5,3,1.4162,13994,1382,12612,98646,0,0,1382,1351.081,1.4162,1,true,found
+p08,Bossa nova,Guerra Fria,bfs,,2,1.0468,1505,589,916,59709,0,0,589,60.406,0.8694,1.203998,true,found
+p08,Bossa nova,Guerra Fria,dijkstra,,2,0.8694,2574,501,2073,38171,0,0,501,285.966,0.8694,1,true,found
+p08,Bossa nova,Guerra Fria,astar-admissible,,2,0.8694,1146,358,788,25978,0,0,358,127.014,0.8694,1,true,found
+p08,Bossa nova,Guerra Fria,astar-weighted,0.5,2,0.8694,36,36,0,2172,0,0,36,7.61,0.8694,1,true,found
+p09,Amazônia,Mecânica quântica,bfs,,2,1.3923,14735,2611,12124,156264,0,0,2611,508.01,1.3844,1.005706,true,found
+p09,Amazônia,Mecânica quântica,dijkstra,,2,1.3844,55535,3258,52277,163378,0,0,3258,1956.527,1.3844,1,true,found
+p09,Amazônia,Mecânica quântica,astar-admissible,,2,1.3844,39745,2862,36883,145346,0,0,2862,2405.222,1.3844,1,true,found
+p09,Amazônia,Mecânica quântica,astar-weighted,0.5,2,1.3844,5642,894,4748,55082,0,0,894,365.048,1.3844,1,true,found
+p10,Chocolate,Império Romano,bfs,,2,1.575,2101,810,1291,66561,0,0,810,62.848,0.9525,1.653546,true,found
+p10,Chocolate,Império Romano,dijkstra,,2,0.9525,6390,934,5456,57418,0,0,934,225.802,0.9525,1,true,found
+p10,Chocolate,Império Romano,astar-admissible,,2,0.9525,3168,632,2536,42487,0,0,632,254.667,0.9525,1,true,found
+p10,Chocolate,Império Romano,astar-weighted,0.5,2,0.9525,123,106,17,4779,0,0,106,16.578,0.9525,1,true,found

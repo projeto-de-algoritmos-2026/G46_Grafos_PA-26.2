@@ -1,5 +1,5 @@
 algo,lambda,pairs,pairs_found,mean_path_length,mean_path_cost,mean_expanded,mean_productive_expansions,mean_enqueued,mean_elapsed_ms,mean_suboptimality_ratio,max_suboptimality_ratio
-bfs,,10,10,2.1,1.3148,32102.9,2106.3,119133,4404.919,1.219474,1.653546
-dijkstra,,10,10,2.1,1.074,22885.9,1802.8,97528,2843.314,1,1
-astar-admissible,,10,10,2.1,1.074,14545.3,1396.8,80145.9,2999.835,1,1
-astar-weighted,0.5,10,10,2.1,1.074,1339.1,366.8,23755.2,290.722,1,1
+bfs,,10,10,2.1,1.3148,31823.2,1936.5,113567.3,1032.401,1.190751,1.653546
+dijkstra,,10,10,2.1,1.1028,27926.7,1804.4,97479.8,978.02,1,1
+astar-admissible,,10,10,2.1,1.1028,18800,1473.6,83114.4,997.059,1,1
+astar-weighted,0.5,10,10,2.1,1.1028,2497.5,428.6,27739.9,236.322,1,1

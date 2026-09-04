@@ -1,7 +1,7 @@
 /**
  * Comparação empírica dos quatro algoritmos sobre os 10 pares fixos de `data/pairs.json`.
  *
- *   WIKI_OFFLINE=1 npx tsx scripts/benchmark.ts [--repeats N]
+ *   npm run benchmark [-- --repeats N]
  *
  * Escreve `data/results/benchmark.csv` (uma linha por par × configuração) e
  * `data/results/summary.csv` (uma linha por configuração).
@@ -11,6 +11,13 @@
  * Wikipédia, que muda entre execuções. Todos os algoritmos veem exatamente o mesmo grafo
  * finito. O preço é que o "ótimo" reportado é o ótimo **sobre o subgrafo dumpado**, não sobre a
  * Wikipédia inteira — e isso precisa estar dito no README.
+ *
+ * **Por que o cache é neutralizado.** O script npm aponta `WIKI_CACHE_DIR` para um diretório
+ * que não existe, então a única fonte de dados é o dump versionado. Sem isso os números
+ * dependeriam do que o cache local acumulou — quem rodou a interface online algumas vezes mede
+ * um grafo maior do que quem acabou de clonar o repositório, e os dois obtêm CSVs diferentes.
+ * Foi exatamente o que aconteceu antes desta trava: `Universidade de Brasília → Álgebra linear`
+ * passou a achar um caminho de 4 saltos e custo 1,2734 que o dump sozinho não contém.
  *
  * **Por que a mediana de três.** Só o tempo varia entre repetições; caminho, custo e contagens
  * de nós são determinísticos por construção (o heap desempata por ordem de inserção). O script

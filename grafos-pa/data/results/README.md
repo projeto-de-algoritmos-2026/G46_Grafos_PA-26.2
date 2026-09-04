@@ -1,6 +1,13 @@
 # Resultados da medição empírica
 
-Gerados por `npm run benchmark`, que é `WIKI_OFFLINE=1 tsx scripts/benchmark.ts`.
+Gerados por `npm run benchmark`, que é
+`WIKI_OFFLINE=1 WIKI_CACHE_DIR=data/.cache-disabled tsx scripts/benchmark.ts`.
+
+**O cache é neutralizado de propósito.** `WIKI_CACHE_DIR` aponta para um diretório que não
+existe, então a única fonte de dados é o dump versionado. Sem isso os números dependeriam do que
+o cache local acumulou: quem rodou a interface em modo online algumas vezes mede um grafo maior
+do que quem acabou de clonar o repositório. Não é hipótese — aconteceu: `p06` passou a achar um
+caminho de 4 saltos e custo 1,2734 que o dump sozinho não contém.
 
 Cada execução roda os **10 pares** de `data/pairs.json` × **4 configurações** × **3 repetições**,
 inteiramente sobre `data/dump/graph.json.gz`. Nenhuma requisição de rede é feita: a coluna
