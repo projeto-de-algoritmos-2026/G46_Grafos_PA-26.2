@@ -11,9 +11,10 @@
  * apresentação e não tem por que contaminar o motor.
  */
 
-import type { NodeRole, PathResponse, Subgraph } from "@/lib/api/types";
+import type { NodeRole, PathResponse, Subgraph, SubgraphLink } from "@/lib/api/types";
 import { LazyGraph } from "@/lib/graph/lazyGraph";
 import type { Edge, NodeId } from "@/lib/graph/types";
+import { sccStats, tarjanScc } from "@/lib/scc/tarjan";
 import { bfs } from "@/lib/search/bfs";
 import { DEFAULT_EXPLORED_LIMIT } from "@/lib/search/explored";
 import { admissibleHeuristic, weightedHeuristic } from "@/lib/search/heuristics";
@@ -35,12 +36,49 @@ function readNumber(raw: string | null, fallback: number, max: number): number {
 }
 
 /**
- * Converte a árvore amostrada na forma do desenho, marcando o papel de cada vértice.
+ * Teto de arestas fora da árvore **no desenho**. Elas revelam os ciclos (ver `closeCycles`),
+ * mas o traço fraco de milhares delas vira uma névoa sobre a árvore. O Tarjan roda antes do
+ * corte, sobre todas: a estatística é do subgrafo induzido pelos vértices desenhados, e só o
+ * que se vê é amostrado.
+ */
+const MAX_DRAWN_EXTRA_EDGES = 1_500;
+
+/**
+ * Arestas já conhecidas **entre** os vértices desenhados, fora as da árvore de busca.
  *
- * Os vértices saem das pontas das arestas: a árvore de busca cobre todo vértice descoberto
- * exceto a origem, que não tem aresta de entrada e por isso é semeada à parte.
+ * A árvore de busca é, por definição, acíclica: rodar Tarjan só sobre ela devolveria
+ * componentes de um vértice cada, e a fase perderia o sentido. Estas arestas são as que fecham
+ * os circuitos — todas já estão na memória da sessão de busca, então reconstituí-las não custa
+ * uma requisição sequer, que é a condição que a fase impõe.
+ */
+function closeCycles(
+  graph: LazyGraph,
+  nodes: Iterable<NodeId>,
+  treeEdges: ReadonlySet<string>,
+): Edge[] {
+  const inside = new Set(nodes);
+  const extra: Edge[] = [];
+
+  for (const from of inside) {
+    for (const { to, weight } of graph.neighborsOf(from) ?? []) {
+      if (!inside.has(to) || treeEdges.has(`${from}\u0000${to}`)) continue;
+      extra.push({ from, to, weight });
+    }
+  }
+  return extra;
+}
+
+/**
+ * Converte a árvore amostrada na forma do desenho, marcando o papel de cada vértice, fechando
+ * os ciclos com as arestas conhecidas e rotulando cada vértice com sua componente fortemente
+ * conexa.
+ *
+ * Os vértices saem das pontas das arestas da árvore: ela cobre todo vértice descoberto exceto
+ * a origem, que não tem aresta de entrada e por isso é semeada à parte. As arestas de fora da
+ * árvore não acrescentam vértices — só ligam os que já estão desenhados.
  */
 function buildSubgraph(
+  graph: LazyGraph,
   explored: Edge[],
   path: NodeId[],
   source: NodeId,
@@ -60,22 +98,51 @@ function buildSubgraph(
   };
 
   const nodes = new Map<NodeId, NodeRole>([[source, "source"]]);
-  const links = explored.map((edge) => {
+  const treeEdges = new Set<string>();
+  const links: SubgraphLink[] = explored.map((edge) => {
     nodes.set(edge.from, roleOf(edge.from));
     nodes.set(edge.to, roleOf(edge.to));
+    treeEdges.add(`${edge.from}\u0000${edge.to}`);
     return {
       source: edge.from,
       target: edge.to,
       weight: edge.weight,
       inPath: pathEdges.has(`${edge.from}\u0000${edge.to}`),
+      tree: true,
     };
   });
 
+  const extra = closeCycles(graph, nodes.keys(), treeEdges);
+
+  // Tarjan sobre o subgrafo induzido inteiro — árvore mais todas as arestas que fecham ciclo.
+  // Cortar antes daria componentes menores por falta de aresta, e não por ausência de ciclo.
+  const successors = new Map<NodeId, NodeId[]>();
+  const addSuccessor = (from: NodeId, to: NodeId) => {
+    const list = successors.get(from);
+    if (list) list.push(to);
+    else successors.set(from, [to]);
+  };
+  for (const link of links) addSuccessor(link.source, link.target);
+  for (const edge of extra) addSuccessor(edge.from, edge.to);
+  const scc = tarjanScc(nodes.keys(), (node) => successors.get(node) ?? []);
+
+  for (const edge of extra.slice(0, MAX_DRAWN_EXTRA_EDGES)) {
+    links.push({
+      source: edge.from,
+      target: edge.to,
+      weight: edge.weight,
+      inPath: false,
+      tree: false,
+    });
+  }
+
   return {
-    nodes: [...nodes].map(([id, role]) => ({ id, role })),
+    nodes: [...nodes].map(([id, role]) => ({ id, role, scc: scc.componentOf.get(id) ?? -1 })),
     links,
     expanded,
     truncated: explored.length >= limit,
+    sccSizes: scc.components.map((component) => component.length),
+    scc: sccStats(scc),
   };
 }
 
@@ -143,6 +210,7 @@ export async function GET(request: Request): Promise<Response> {
       metrics: result.metrics,
       graph: graph.stats(),
       subgraph: buildSubgraph(
+        graph,
         result.explored,
         result.path,
         source,

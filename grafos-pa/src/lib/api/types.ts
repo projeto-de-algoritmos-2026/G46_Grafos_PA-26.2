@@ -5,6 +5,7 @@
  */
 
 import type { GraphStats } from "@/lib/graph/lazyGraph";
+import type { SccStats } from "@/lib/scc/tarjan";
 import type { NodeId, SearchMetrics, StopReason } from "@/lib/graph/types";
 
 /** Papel de um vértice no desenho. Define cor e tamanho em `GraphView`. */
@@ -13,6 +14,8 @@ export type NodeRole = "source" | "target" | "path" | "visited";
 export interface SubgraphNode {
   id: NodeId;
   role: NodeRole;
+  /** Índice da componente fortemente conexa, para a colorização alternável. */
+  scc: number;
 }
 
 export interface SubgraphLink {
@@ -21,6 +24,11 @@ export interface SubgraphLink {
   weight: number;
   /** Aresta do caminho encontrado, destacada com o peso em rótulo. */
   inPath: boolean;
+  /**
+   * Aresta da árvore de busca. As de fora dela ligam vértices já desenhados e existem para
+   * fechar os ciclos que o Tarjan encontra — desenhadas mais fracas, são o pano de fundo.
+   */
+  tree: boolean;
 }
 
 /**
@@ -34,6 +42,10 @@ export interface Subgraph {
   expanded: number;
   /** Verdadeiro quando o teto de nós cortou a árvore — o desenho é uma amostra. */
   truncated: boolean;
+  /** Cardinalidade de cada componente, indexada pelo `scc` dos vértices. */
+  sccSizes: number[];
+  /** Resumo das componentes do subgrafo desenhado. */
+  scc: SccStats;
 }
 
 export interface PathResponse {

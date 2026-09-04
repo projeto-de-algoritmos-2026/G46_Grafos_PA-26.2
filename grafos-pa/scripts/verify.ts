@@ -10,8 +10,15 @@
  */
 
 import type { NodeId } from "@/lib/graph/types";
+import { sccStats, tarjanScc } from "@/lib/scc/tarjan";
 import { bfs } from "@/lib/search/bfs";
-import { FIXTURE_CASE, FIXTURE_EDGES, FIXTURE_NODES, FixtureGraph } from "@/lib/search/fixtures";
+import {
+  FIXTURE_CASE,
+  FIXTURE_EDGES,
+  FIXTURE_NODES,
+  FIXTURE_SCCS,
+  FixtureGraph,
+} from "@/lib/search/fixtures";
 import { EPSILON } from "@/lib/graph/cost.config";
 import {
   admissibleHeuristic,
@@ -310,6 +317,71 @@ async function verifyAstar(): Promise<void> {
   console.log();
 }
 
+/**
+ * Componentes fortemente conexas, sobre dois grafos de resposta conhecida.
+ *
+ * O primeiro é o próprio fixture, cujas componentes estão escritas em `FIXTURE_SCCS`: dois
+ * ciclos disjuntos e oito vértices soltos. O segundo é o mesmo grafo sem as duas arestas de
+ * retorno, o que o torna acíclico — e num DAG toda componente tem exatamente um vértice, que é
+ * o contraexemplo que pega um algoritmo que "acha ciclo" onde não há.
+ */
+function verifyScc(): void {
+  /** Sucessores em memória, a mesma forma que a rota monta a partir do subgrafo explorado. */
+  const successorsOf = (edges: readonly (readonly [NodeId, NodeId, number])[]) => {
+    const adjacency = new Map<NodeId, NodeId[]>();
+    for (const node of FIXTURE_NODES) adjacency.set(node, []);
+    for (const [from, to] of edges) adjacency.get(from)!.push(to);
+    return (node: NodeId) => adjacency.get(node) ?? [];
+  };
+
+  /** Componentes numa forma canônica, para a comparação não depender da ordem de saída. */
+  const canonical = (components: readonly (readonly NodeId[])[]) =>
+    components
+      .map((component) => [...component].sort().join(""))
+      .sort()
+      .join(" | ");
+
+  const result = tarjanScc(FIXTURE_NODES, successorsOf(FIXTURE_EDGES));
+  const stats = sccStats(result);
+
+  console.log("componentes fortemente conexas do fixture");
+  for (const component of [...result.components].sort((a, b) => b.length - a.length)) {
+    console.log(`  {${[...component].sort().join(", ")}}`);
+  }
+  console.log(
+    `  ${stats.components} componentes, ${stats.cyclic} com mais de um vértice ` +
+      `(cada uma é prova de ciclo), maior com ${stats.largest}`,
+  );
+  console.log();
+
+  check(
+    "tarjan encontra as componentes esperadas do fixture",
+    canonical(result.components) === canonical(FIXTURE_SCCS),
+    canonical(result.components),
+  );
+
+  check(
+    "todo vértice pertence a exatamente uma componente",
+    result.componentOf.size === FIXTURE_NODES.length &&
+      result.components.reduce((total, component) => total + component.length, 0) ===
+        FIXTURE_NODES.length,
+    `${result.componentOf.size} de ${FIXTURE_NODES.length} vértices`,
+  );
+
+  // As duas arestas de retorno são exatamente o que fecha os dois ciclos do fixture.
+  const acyclicEdges = FIXTURE_EDGES.filter(
+    ([from, to]) => !(from === "H" && to === "D") && !(from === "N" && to === "E"),
+  );
+  const acyclic = tarjanScc(FIXTURE_NODES, successorsOf(acyclicEdges));
+  const acyclicStats = sccStats(acyclic);
+
+  check(
+    "num grafo acíclico toda componente tem um vértice só",
+    acyclicStats.components === FIXTURE_NODES.length && acyclicStats.largest === 1,
+    `${acyclicStats.components} componentes, maior com ${acyclicStats.largest}`,
+  );
+}
+
 async function main() {
   console.log("=== verificação sobre o grafo sintético ===");
   console.log(`fixture: ${FIXTURE_NODES.length} vértices, ${FIXTURE_EDGES.length} arestas`);
@@ -318,6 +390,7 @@ async function main() {
   await verifyBfs();
   await verifyDijkstra();
   await verifyAstar();
+  verifyScc();
 
   for (const { label, ok, detail } of checks) {
     console.log(`[${ok ? "OK  " : "FALHA"}] ${label.padEnd(52)} ${detail}`);

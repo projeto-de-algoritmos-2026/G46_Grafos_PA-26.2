@@ -11,7 +11,9 @@
  *
  * O que está desenhado é a **árvore de busca amostrada** (ver `lib/search/explored.ts`), não a
  * vizinhança bruta: é ela que difere entre BFS, Dijkstra e A* para o mesmo par, e portanto a
- * única figura em que trocar de algoritmo muda alguma coisa.
+ * única figura em que trocar de algoritmo muda alguma coisa. Sobre ela, em traço fraco, vêm as
+ * arestas já conhecidas entre os vértices desenhados — as que fecham os ciclos que o Tarjan
+ * encontra, e sem as quais a colorização por componente não teria o que mostrar.
  */
 
 import dynamic from "next/dynamic";
@@ -38,6 +40,7 @@ const ROLE_RADIUS: Record<NodeRole, number> = {
 interface ViewNode {
   id: string;
   role: NodeRole;
+  scc: number;
   x?: number;
   y?: number;
 }
@@ -47,7 +50,14 @@ interface ViewLink {
   target: string | ViewNode;
   weight: number;
   inPath: boolean;
+  tree: boolean;
 }
+
+/**
+ * Cor de uma componente, pelo ângulo áureo: índices vizinhos caem longe um do outro no círculo
+ * de matizes, então componentes adjacentes na tela não saem em tons parecidos.
+ */
+const componentColor = (index: number) => `hsl(${(index * 137.508) % 360} 65% 45%)`;
 
 /**
  * O componente é genérico nos tipos de nó e de aresta, e `next/dynamic` apaga essa
@@ -66,6 +76,7 @@ const endpoint = (value: string | ViewNode): ViewNode | undefined =>
 export function GraphView({ subgraph }: { subgraph: Subgraph }) {
   const container = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const [colorByScc, setColorByScc] = useState(false);
 
   // O force-graph precisa de largura e altura em pixels; sem medir o contêiner ele assume o
   // tamanho da janela e transborda o painel.
@@ -96,8 +107,30 @@ export function GraphView({ subgraph }: { subgraph: Subgraph }) {
   /** Acima de algumas centenas de nós, rotular todos vira uma mancha ilegível. */
   const labelAll = data.nodes.length <= 60;
 
+  /**
+   * No modo componente, singletons ficam cinzentos: componente de um vértice é a ausência de
+   * ciclo, e colorir todas igualmente esconderia justamente o que a fase quer mostrar.
+   */
+  const nodeColor = (node: ViewNode): string => {
+    if (!colorByScc) return ROLE_COLOR[node.role];
+    const size = subgraph.sccSizes[node.scc] ?? 1;
+    return size > 1 ? componentColor(node.scc) : "#d4d4d8";
+  };
+
   return (
     <div ref={container} className="relative h-full w-full">
+      <button
+        type="button"
+        onClick={() => setColorByScc((on) => !on)}
+        className="absolute right-3 top-3 z-10 rounded-full border border-zinc-300 bg-white/90 px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-300"
+      >
+        {colorByScc ? "colorir por papel" : "colorir por componente"}
+      </button>
+      {subgraph.scc.cyclic > 0 && colorByScc && (
+        <p className="absolute left-3 top-3 z-10 text-xs text-zinc-500">
+          {subgraph.scc.cyclic} componente(s) com mais de um vértice — cada uma é prova de ciclo
+        </p>
+      )}
       {size.width > 0 && (
         <ForceGraph2D
           width={size.width}
@@ -106,16 +139,18 @@ export function GraphView({ subgraph }: { subgraph: Subgraph }) {
           backgroundColor="transparent"
           cooldownTicks={100}
           d3VelocityDecay={0.3}
-          linkDirectionalArrowLength={(link: ViewLink) => (link.inPath ? 5 : 2.5)}
+          linkDirectionalArrowLength={(link: ViewLink) => (link.inPath ? 5 : link.tree ? 2.5 : 0)}
           linkDirectionalArrowRelPos={1}
-          linkColor={(link: ViewLink) => (link.inPath ? "#f59e0b" : "#d4d4d8")}
-          linkWidth={(link: ViewLink) => (link.inPath ? 2.5 : 0.5)}
+          linkColor={(link: ViewLink) =>
+            link.inPath ? "#f59e0b" : link.tree ? "#d4d4d8" : "#ececee"
+          }
+          linkWidth={(link: ViewLink) => (link.inPath ? 2.5 : link.tree ? 0.5 : 0.3)}
           nodeLabel={(node: ViewNode) => node.id}
           nodeCanvasObject={(node: ViewNode, ctx, globalScale) => {
             const radius = ROLE_RADIUS[node.role];
             ctx.beginPath();
             ctx.arc(node.x ?? 0, node.y ?? 0, radius, 0, 2 * Math.PI);
-            ctx.fillStyle = ROLE_COLOR[node.role];
+            ctx.fillStyle = nodeColor(node);
             ctx.fill();
 
             if (node.role === "visited" && !labelAll) return;

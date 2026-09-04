@@ -148,6 +148,18 @@ export function MetricsPanel({ modes, results, selected, onSelect }: MetricsPane
             ))}
           </tr>
           <tr className="border-t border-zinc-200 dark:border-zinc-800">
+            <td className="py-1.5 pr-3 text-zinc-500">componentes (Tarjan)</td>
+            {columns.map((mode) => {
+              const { scc } = results[mode.key].subgraph;
+              return (
+                <td key={mode.key} className="px-2 py-1.5 text-right text-xs text-zinc-500">
+                  {integer.format(scc.components)}, {integer.format(scc.cyclic)} com ciclo, maior
+                  com {integer.format(scc.largest)}
+                </td>
+              );
+            })}
+          </tr>
+          <tr className="border-t border-zinc-200 dark:border-zinc-800">
             <td className="py-1.5 pr-3 text-zinc-500">vértices desenhados</td>
             {columns.map((mode) => {
               const { subgraph } = results[mode.key];
