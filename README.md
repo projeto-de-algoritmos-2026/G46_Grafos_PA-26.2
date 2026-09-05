@@ -294,4 +294,4 @@ grafos-pa/
 
 ## Vídeo de explicação
 
-_(a preencher)_ 
+[Link para o vídeo!](https://youtu.be/ek0GuIN4UTo)
